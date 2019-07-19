@@ -1,0 +1,73 @@
+#!/usr/bin/perl
+
+use utf8;
+use Encode;
+use Time::Piece;
+
+$timetable_week = "TimeTable_w.txt";
+$timetable_holiday = "TimeTable_h.txt";
+
+
+$header = "Content-type: text/html; charset=UTF-8\n\n";
+$header = $header."<html><header><title>Train at Time</title></header>\n";
+
+$info = getTrainInfo();
+$body ="<body>".$info."</body>\n</html>";
+print $header;
+print $body;
+
+
+sub getTrainInfo {
+	my $now_obj = localtime;
+#	my $now = $now_obj->hour.":".$now_obj->min;
+
+	my $filename;
+
+	if ($now_obj->_wday == 0 || $now_obj->_wday == 6 ) {
+		$filename = $timetable_holiday;
+	} else {
+		$filename = $timetable_week;
+	}
+	
+	open (TIMETABLE, "< $filename") or die print("error: $1");
+
+	my $buf = "";
+	my $is_find = 0;
+
+	while(<TIMETABLE>) {
+		chomp($_);
+		my @items = split(/,/, $_);
+
+		($hour, $min) = split(/:/, @items[0]);
+
+		#print ("items=".@items[0]."\n");
+		#print ("hour=".$hour." min=".$min."\n");
+		#print ("Now ".$now_obj->hour.":".$now_obj->min."  Train $hour:$min\n");
+
+		if ( isNearBy($hour, $min, $now_obj->hour, $now_obj->min) == 1 ) {
+			foreach $item (@items){
+				$buf = $buf." ".$item;
+			}
+			$is_find = 1;
+			last;
+		}
+	}
+
+	if ( $is_find == 0 ) {
+		$buf = 'Train not found.';
+	}
+
+	return $buf;
+}
+
+sub isNearBy {
+	my ($hour_a, $min_a, $hour_b, $min_b) = @_;
+
+	if ( $hour_a > $hour_b ) {
+		return 1;
+	} elsif ( ($hour_a == $hour_b) && ($min_a > $min_b) ) {
+		return 1;
+	} else {
+		return 0;
+	}
+}

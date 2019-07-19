@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+
+use LWP::UserAgent;
+use HTTP::Request;
+use HTTP::Response;
+use HTML::TreeBuilder;
+use Encode;
+use utf8;
+
+$dw = 0;
+
+$header = "Content-type: text/html; charset=UTF-8\n\n";
+$body = getTimeTable("https://trainbus.meitetsu.co.jp/sp/T5?uid=40236&path=201907198534226&dir=42&USR=SP&lineDirection=449-136%2C3&dw=".$dw."&hour=08");
+
+
+$savestr = parseHtml($body);
+saveTimeTable($savestr);
+
+print $header;
+print "Time table of Komi sta.<br>\n";
+$savestr =~ s/\n/<br>\n/g;
+print $savestr;
+print "End of data.";
+
+sub getTimeTable {
+	my $url = $_[0];
+	my $proxy = new LWP::UserAgent;
+	my $req = HTTP::Request->new('GET' => $url);
+	my $res = $proxy->request($req);
+	my $str = $res->content;
+
+	return $str;
+}
+
+sub parseHtml {
+	my $html_body = $_[0];
+	my $tree = HTML::TreeBuilder->new;
+	my $buf = "";
+
+	$tree->parse($html_body);
+
+	my @items = $tree->look_down('class','timebody')->find('li');
+	for my $li (@items) {
+		$buf = $buf.$li->find('dt')->as_text.",".$li->find('dd')->as_text."\n";
+	}
+
+	#--- replace non display charcter.
+	$buf =~ s/\x{fffd}/''/g;
+	$buf =~ s/\xa0/,/g;
+	$buf =~ s/,,/,/g;
+	$buf =~ s/^,//g;
+	$buf =~ s/\n,/\n/g;
+
+	return $buf;
+}
+
+sub saveTimeTable {
+	my $temp = $_[0];
+	my $safix = "_";
+
+	if ( $dw == 0 ) {
+		$safix = $safix."w";
+	} else {
+		$safix = $safix."h";
+	}
+
+	open (SAVEFILE, "> TimeTable".$safix.".txt") or die("error :$1");
+	print SAVEFILE $temp;
+	close SAVEFILE;
+}
