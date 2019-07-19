@@ -7,11 +7,7 @@
 
 ・LAN上に時刻表データを保持するWEBサーバが必要です。CGIが使えるものならなんでもいいと思います。
   
-  当方は
-  
-    ・Linux Mint 1.9 (MATE Edition) + Apache2 + Perl 5
-  
-  で構成しました。
+  当方は　Linux Mint 1.9 (MATE Edition) + Apache2 + Perl 5　で構成しました。
   
 ・以下のライブラリを使用させていただきました。
 
