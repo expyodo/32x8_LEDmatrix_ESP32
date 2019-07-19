@@ -43,6 +43,10 @@ public:
     void enableOutput();
     // 出力ディセーブル
     void disableOutput();
+    // スクロールの１列あたりの表示時間設定
+    void setScrollDelayTime(int milliSec);
+    // 行スキャンの１行あたりの表示時間設定
+    void setRefreashRate(int microSec);
 
 private:
     // フォントビットマップをマトリクスへ出力

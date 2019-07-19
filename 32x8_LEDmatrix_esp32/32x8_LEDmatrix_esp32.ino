@@ -28,6 +28,8 @@
 // 2019/06/29 スクロール処理を見直して作り直した。
 // 2019/07/12 LEDマトリクス関連処理をクラス化して分離
 //            併せて名鉄運行情報関連処理とNTP関連処理を単純にファイル分離
+// 2019/07/19 いくつか処理を関数化
+//            LEDマトリクスの表示時間関連をこちらから指定するよう修正
 //-----------------------------------------------------------------------------
 // 制限事項 2019/06/29 更新
 // ESP32用美咲フォントライブラリ@mgo-tecに対応
@@ -67,13 +69,10 @@ extern "C" {
 //*****************************************************************************
 // WiFi関連 実験用
 //*****************************************************************************
-//const char* ssid = "Your SSID";
-//const char* password = "Your password";
-const char* meitetsuOpeHost = "http://top.meitetsu.co.jp/em/";
-const char* localTrainHost = "http://192.168.11.10/cgi-bin/getTrainTime";
-struct tm oldTm;
-const int intervalMinutes = 30;
-String meitetsuInfo = "";
+const char* meitetsuOpeHost = "http://top.meitetsu.co.jp/em/"; //名鉄運行情報URL
+const char* localTrainHost = "http://192.168.11.10/cgi-bin/getTrainTime"; //直近１列車取得スクリプトのURL
+struct tm oldTm;            //時刻退避用
+String meitetsuInfo = "";   //名鉄運行情報退避用
 
 //-----------------------------------------------------------------------------
 // WiFiに接続する
@@ -172,6 +171,30 @@ String receiveString() {
     return buffer;
 }
 
+//*****************************************************************************
+// 名鉄の運行情報を表示する
+//*****************************************************************************
+void showMeitetsuOperation(struct tm &timeInfo) {
+    
+    if ( isFirstTime || isMeitetsuUpdate(timeInfo) ) {
+    
+        // 一定間隔にてHTTP経由で運行情報を取得
+        String buf = "運行情報を更新します";
+        LMD.scrollString(buf);
+        
+        buf = getHTTPString(meitetsuOpeHost);
+        meitetsuInfo = parseMeitetsuInfo(buf);
+
+        oldTm = timeInfo;
+        isFirstTime = false;
+    }
+    
+    LMD.scrollString(meitetsuInfo);
+}
+
+//*****************************************************************************
+// 次の列車を表示する
+//*****************************************************************************
 void showNextTrain() {
     // 直近の列車情報を取得
     String trainInfo = getHTTPString(localTrainHost);
@@ -184,6 +207,9 @@ void showNextTrain() {
 }
 
 
+//*****************************************************************************
+// CPUコアの温度を表示する
+//*****************************************************************************
 void showCoreTemprature() {
     //コア温度を取得
     float coreTemp = (temprature_sens_read() -32) /1.8;
@@ -213,6 +239,10 @@ void setup()
 {
     // シリアル通信開始
     Serial.begin(115200);
+
+    // マトリクス表示関連設定
+    LMD.setScrollDelayTime(35);
+    LMD.setRefreashRate(15);
     
     // レジスタクリア
     LMD.disableOutput();
@@ -267,31 +297,10 @@ void loop()
     // 現在時刻もしくはシリアル経由受信文字列を表示する
     LMD.scrollString(buf);
     buf = "";
-    delay(1000);
-
-    /*
-    buf = "名鉄さん動いてますか～";
-    LMD.scrollString(buf);
-
-    if ( isFirstTime || isMeitetsuUpdate(timeInfo) ) {
     
-        // 一定間隔にてHTTP経由で運行情報を取得
-        buf = "運行情報を更新します";
-        LMD.scrollString(buf);
-        
-        String htmlStr = getHTTPString(meitetsuOpeHost);
-        meitetsuInfo = "";
-        meitetsuInfo = parseMeitetsuInfo(htmlStr);
-        htmlStr="";
-
-        oldTm = timeInfo;
-        isFirstTime = false;
-    }
-    
-    LMD.scrollString(meitetsuInfo);
-    */
-
+    showMeitetsuOperation(timeInfo);
     showNextTrain();
+    delay(100);
     showCoreTemprature();
     showFreeHeapSize();
     

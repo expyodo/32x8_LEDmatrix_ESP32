@@ -13,7 +13,10 @@
 // ②インスタンス生成時に制御ピンを指定していない場合はsetControlPinNoをコール
 // ③使いたいメソッドを呼び出す
 //-----------------------------------------------------------------------------
-// コンストラクタで制御ピンを指定できるようにする予定
+//【更新履歴】
+// 2019/07/19 制御ピンを指定できるコンストラクタを追加
+//            列送りの待機時間と行スキャン待機時間を設定できるメソッドを追加
+//            あわせて両定数をメンバ変数化
 //=============================================================================
 
 //--- フォント定義ファイル名 ---------------------------------------------------
@@ -29,8 +32,6 @@ const int _FONT_DOT_HEIGHT = 8;         // フォント１文字の高さ（ド�
 const int _FONT_DOT_WIDTH = 8;          // フォント１文字の幅（ドット）
 const int _BIT_MASK = 128;              // ビットマスク（最上位1bitのみ）
 const int _MAX_LENGTH_OF_STRING = 400;  // 表示対象文字列の最大長さ
-const int _SCROLL_DELAY_TIME = 40;      // スクロールで列送りする際に待つ時間（ミリ秒）
-const int _REFREASH_RATE = 15;          // 行スキャンの1行あたり待機時間（マイクロ秒）
 
 //--- マトリクス制御用ピン番号 -------------------------------------------------
 int _serialData;        //シリアルデータ SER
@@ -38,6 +39,10 @@ int _shiftClk;          //シフトクロック SRCLK
 int _latchClk;          //ラッチクロック RCLK
 int _registerClear;     //レジスタクリア SRCLR
 int _outputEnable;      //出力切り替え   OE
+
+//--- 制御用変数 ------------------------------------------------------------
+int _scrollDelayTime = 40;          // スクロールで列送りする際に待つ時間（ミリ秒）
+int _refreashRate = 15;             // 行スキャンの1行あたり待機時間（マイクロ秒）
 
 ESP32_SPIFFS_MisakiFNT _MFNT;       //美咲フォント@mgo-tec 利用クラス
 uint8_t _fontBitmapBuffer[_MAX_LENGTH_OF_STRING][_FONT_DOT_HEIGHT]; //フォント変換後のビットマップバッファ
@@ -227,6 +232,19 @@ void LedMatrixDriver::disableOutput() {
     digitalWrite(_outputEnable, HIGH);  
 }
 
+//=============================================================================
+// １列あたりの表示時間を設定する（=スクロールのスピード）
+//=============================================================================
+void LedMatrixDriver::setScrollDelayTime(int milliSec) {
+    _scrollDelayTime = milliSec;
+}
+
+//=============================================================================
+// 行スキャンの１行あたりの表示時間
+//=============================================================================
+void LedMatrixDriver::setRefreashRate(int microSec) {
+    _refreashRate = microSec;
+}
 /******************************************************************************
  * これよりprivateメンバ
  *****************************************************************************/
@@ -241,7 +259,7 @@ void LedMatrixDriver::outputToMatrix(uint32_t *matrixBitmap) {
     unsigned long startTime = millis(); //表示開始時間
 
     //指定時間経過するまで同じデータを表示する。
-    while( millis() < startTime + _SCROLL_DELAY_TIME ) {
+    while( millis() < startTime + _scrollDelayTime ) {
 
         for ( int row = 0; row < _FONT_DOT_HEIGHT; row++ ) {
             
@@ -249,7 +267,7 @@ void LedMatrixDriver::outputToMatrix(uint32_t *matrixBitmap) {
             LedMatrixDriver::rowShiftOut(_BIT_MASK >> row);         //  行スキャン
 
             LedMatrixDriver::updateStorage(); //データ送信が終わったのでストレージへラッチ
-            delayMicroseconds(_REFREASH_RATE); //次の行へ移る前に表示状態で待機
+            delayMicroseconds(_refreashRate); //次の行へ移る前に表示状態で待機
         }
     }
 }

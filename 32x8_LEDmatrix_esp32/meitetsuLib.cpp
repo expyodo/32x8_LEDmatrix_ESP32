@@ -12,14 +12,11 @@
 //-----------------------------------------------------------------------------
 bool isMeitetsuUpdate(struct tm &timeInfo) {
     // 名鉄運行情報 提供時間外は常にfalse
-    if ( timeInfo.tm_hour >= 1 && timeInfo.tm_hour < 4 ) {
-        //01:00～05:00は提供時間外
+    if ( timeInfo.tm_hour >= 1 && timeInfo.tm_hour < 5 ) {
+        //01:00～04:59は問答無用で提供時間外
         return false;
     } else if ( timeInfo.tm_hour == 0 && timeInfo.tm_min > 30 ) {
         //0:30より後は提供時間外
-        return false;
-    } else if ( timeInfo.tm_hour == 4 && timeInfo.tm_min < 30 ) {
-        //4:30より前は提供時間外
         return false;
     }
     
@@ -67,7 +64,6 @@ String parseMeitetsuInfo(String &meitetsuHP) {
 
     // 運行情報自体の先頭は&ndspで表示位置を調整されているので、
     // &ndspで探しに行くと運行情報が記載された行が取得できる
-
 #ifdef DEBUG
     Serial.println("nbsp find...");
 #endif
